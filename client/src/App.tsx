@@ -40,10 +40,13 @@ function getSavedGameType(): string {
 }
 
 const urlGame = getUrlGame();
+const urlCode = new URLSearchParams(window.location.search).get('code');
+// If no game param but code is present, use saved game type
+const effectiveGame = urlGame || (urlCode ? getSavedGameType() : null);
 
 const initialState: GameState = {
-  view: urlGame ? 'home' : 'hub',
-  gameType: urlGame || null,
+  view: effectiveGame ? 'home' : 'hub',
+  gameType: effectiveGame,
   roomCode: getSavedRoomCode(),
   playerId: getOrCreatePlayerId(),
   playerName: null,
@@ -94,21 +97,20 @@ export default function App() {
     const savedRoomCode = getSavedRoomCode();
     const savedPlayerId = getOrCreatePlayerId();
     if (savedRoomCode && savedPlayerId) {
-      // URL game type takes priority over saved sessionStorage
-      const savedGame = getUrlGame() || getSavedGameType();
-      const prefix = savedGame === 'wordchain' ? 'wc:' : '';
-      // Wait for socket to connect, then rejoin
-      const onConnect = () => {
-        socket.emit(`${prefix}join_room`, {
-          roomCode: savedRoomCode,
-          playerId: savedPlayerId,
-        });
+      const tryRejoin = (event: string) => {
+        if (socket.connected) {
+          socket.emit(event, { roomCode: savedRoomCode, playerId: savedPlayerId });
+        } else {
+          socket.once('connect', () => {
+            socket.emit(event, { roomCode: savedRoomCode, playerId: savedPlayerId });
+          });
+        }
       };
-      if (socket.connected) {
-        onConnect();
-      } else {
-        socket.once('connect', onConnect);
-      }
+
+      // Try with saved game type first, fall back to letterguess
+      const savedGame = getSavedGameType();
+      const prefix = savedGame === 'wordchain' ? 'wc:' : '';
+      tryRejoin(`${prefix}join_room`);
     }
 
     // ---- Room events ----
