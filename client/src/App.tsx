@@ -41,13 +41,14 @@ function getSavedGameType(): string {
 
 const urlGame = getUrlGame();
 const urlCode = new URLSearchParams(window.location.search).get('code');
-// If no game param but code is present, use saved game type
-const effectiveGame = urlGame || (urlCode ? getSavedGameType() : null);
+const savedRoom = getSavedRoomCode();
+// Use URL game, or saved game if there's a room to rejoin, otherwise hub
+const effectiveGame = urlGame || (savedRoom ? getSavedGameType() : null);
 
 const initialState: GameState = {
   view: effectiveGame ? 'home' : 'hub',
   gameType: effectiveGame,
-  roomCode: getSavedRoomCode(),
+  roomCode: savedRoom,
   playerId: getOrCreatePlayerId(),
   playerName: null,
   roomCreatorId: null,
