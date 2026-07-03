@@ -94,7 +94,8 @@ export default function App() {
     const savedRoomCode = getSavedRoomCode();
     const savedPlayerId = getOrCreatePlayerId();
     if (savedRoomCode && savedPlayerId) {
-      const savedGame = getSavedGameType();
+      // URL game type takes priority over saved sessionStorage
+      const savedGame = getUrlGame() || getSavedGameType();
       const prefix = savedGame === 'wordchain' ? 'wc:' : '';
       // Wait for socket to connect, then rejoin
       const onConnect = () => {
