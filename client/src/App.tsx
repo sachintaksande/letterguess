@@ -558,11 +558,10 @@ export default function App() {
           onCancel={() => setShowLeaveConfirm(false)}
           onConfirm={() => {
             sessionStorage.removeItem(ROOM_CODE_KEY);
+            sessionStorage.removeItem(GAME_TYPE_KEY);
             emit(gs.gameType === 'wordchain' ? 'wc:leave_room' : 'leave_room');
-            disconnectSocket();
             setShowLeaveConfirm(false);
             setGs({ ...initialState, view: 'hub', gameType: null, roomCode: null, playerId: getOrCreatePlayerId() });
-            setTimeout(() => connectSocket(), 100);
           }}
         />
       )}
