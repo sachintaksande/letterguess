@@ -164,6 +164,11 @@ export default function App() {
       }));
     });
 
+    // Word Chain: switch to game view when game starts
+    socket.on('wc:game_started', () => {
+      setGs(prev => ({ ...prev, view: 'game', state: 'PLAYING', error: null }));
+    });
+
     socket.on('your_turn_create', (data: { timeLimit: number }) => {
       setGs(prev => ({
         ...prev,
