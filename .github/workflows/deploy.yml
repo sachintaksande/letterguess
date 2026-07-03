@@ -1,0 +1,94 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vps-deploy-letterguess
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.VPS_SSH_KEY }}
+          known_hosts: ${{ secrets.VPS_KNOWN_HOST }}
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'DEPLOY_SCRIPT'
+            set -euo pipefail
+
+            APP_DIR=/opt/letterguess
+            echo "=== Deploy started at $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+
+            # Clone or pull
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/sachintaksande/letterguess.git "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            OLD_SHA=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+            echo "Previous SHA: $OLD_SHA"
+
+            git fetch origin main
+            git reset --hard origin/main
+            NEW_SHA=$(git rev-parse HEAD)
+            echo "Deploying SHA: $NEW_SHA"
+
+            # Install dependencies
+            echo "=== Installing server dependencies ==="
+            cd server
+            npm ci --production
+            cd ..
+
+            # Build client
+            echo "=== Building client ==="
+            cd client
+            npm ci
+            npm run build
+            cd ..
+
+            # Restart server via pm2
+            echo "=== Restarting server ==="
+            export PORT=3000
+            pm2 delete letterguess 2>/dev/null || true
+            pm2 start server/src/index.ts --name letterguess \
+              --interpreter $(which tsx || npx tsx) \
+              --env PORT=3000
+            pm2 save
+
+            echo "=== Deployment complete. SHA: $NEW_SHA ==="
+          DEPLOY_SCRIPT
+
+      - name: Health check
+        run: |
+          VPS_HOST="${{ secrets.VPS_HOST }}"
+          for i in $(seq 1 12); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://${VPS_HOST}:3000/health" 2>&1 || echo "000")
+            echo "Health check $i/12: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "LetterGuess is responding"
+              break
+            fi
+            sleep 5
+          done
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed (HTTP $STATUS)"
+            exit 1
+          fi
+
+      - name: Report deployment
+        run: |
+          VPS_HOST="${{ secrets.VPS_HOST }}"
+          echo "### ✅ LetterGuess deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** http://${VPS_HOST}:3000" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health:** http://${VPS_HOST}:3000/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
