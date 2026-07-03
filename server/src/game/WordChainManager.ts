@@ -302,17 +302,18 @@ export class WordChainManager {
       });
     }
 
-    // Check if game is over (only one player left)
-    const activePlayers = [...room.players.values()].filter(p => !p.eliminated && p.connected);
-    if (activePlayers.length <= 1) {
-      this.endGame(room, activePlayers[0]?.id || null);
-      return null;
-    }
-
-    // Check if all active players have struck in a row — nobody can continue
+    // Check if game is over — all active players struck in a row (chain broken)
     room.consecutiveStrikes++;
+    const activePlayers = [...room.players.values()].filter(p => !p.eliminated && p.connected);
     if (room.consecutiveStrikes >= activePlayers.length) {
-      this.endGame(room, null); // no winner — chain broken
+      // Find player with highest score
+      let bestPlayer: WCPlayer | null = null;
+      let bestScore = -Infinity;
+      for (const p of activePlayers) {
+        const score = (p as any).score || 0;
+        if (score > bestScore) { bestScore = score; bestPlayer = p; }
+      }
+      this.endGame(room, bestPlayer?.id || null);
       return null;
     }
 
