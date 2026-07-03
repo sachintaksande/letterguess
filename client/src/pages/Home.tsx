@@ -25,7 +25,8 @@ export default function Home({ gs, emit }: Props) {
   const handleCreate = (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    emit('create_room', {
+    const prefix = gs.gameType === 'wordchain' ? 'wc:' : '';
+    emit(`${prefix}create_room`, {
       playerName: playerName || undefined,
       maxPlayers,
       maxRounds,
@@ -37,8 +38,9 @@ export default function Home({ gs, emit }: Props) {
     e.preventDefault();
     if (!roomCode.trim()) return;
     setLoading(true);
-    emit('join_room', {
-      roomCode: roomCode.trim().toUpperCase(),
+    const prefix = gs.gameType === 'wordchain' ? 'wc:' : '';
+    emit(`${prefix}join_room`, {
+      roomCode: roomCode.trim(),
       playerName: playerName || undefined,
       playerId: gs.playerId,
     });
@@ -51,9 +53,9 @@ export default function Home({ gs, emit }: Props) {
         <div className="text-center mb-10 animate-float">
           <div className="text-7xl mb-4 drop-shadow-[0_0_20px_rgba(255,45,149,0.5)]">🔤</div>
           <h2 className="text-4xl font-black tracking-tight bg-neon-gradient bg-clip-text text-transparent">
-            LETTER<span className="text-white">GUESS</span>
+            {gs.gameType === 'wordchain' ? (<>WORD<span className="text-white">CHAIN</span></>) : (<>LETTER<span className="text-white">GUESS</span></>)}
           </h2>
-          <p className="text-purple-300/60 mt-2 font-medium">The multiplayer word guessing arena</p>
+          <p className="text-purple-300/60 mt-2 font-medium">{gs.gameType === 'wordchain' ? 'Chain words by their last letter' : 'The multiplayer word guessing arena'}</p>
         </div>
 
         {/* Tabs */}
@@ -114,6 +116,7 @@ export default function Home({ gs, emit }: Props) {
               </div>
             </div>
 
+            {gs.gameType !== 'wordchain' && (
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-purple-300">🔄 Rounds</label>
@@ -132,6 +135,7 @@ export default function Home({ gs, emit }: Props) {
                 <span>20</span>
               </div>
             </div>
+            )}
 
             <button
               type="submit"

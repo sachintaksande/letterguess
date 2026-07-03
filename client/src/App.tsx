@@ -9,6 +9,7 @@ import Hub from './pages/Hub';
 import Home from './pages/Home';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
+import WordChainGame from './games/wordchain/WordChainGame';
 import LeaveConfirmModal from './components/LeaveConfirmModal';
 import { loadMuteStates, isSfxMuted, isMusicMuted, toggleSfxMute, toggleMusicMute, startMusic, stopMusic, playCorrectLetter, playWrongLetter, playYourTurn, playCorrectAnswer, playWrongAnswer, playEliminated, playRoundWin, playNobodyWon } from './sounds';
 
@@ -540,7 +541,7 @@ export default function App() {
           onCancel={() => setShowLeaveConfirm(false)}
           onConfirm={() => {
             sessionStorage.removeItem(ROOM_CODE_KEY);
-            emit('leave_room');
+            emit(gs.gameType === 'wordchain' ? 'wc:leave_room' : 'leave_room');
             disconnectSocket();
             setShowLeaveConfirm(false);
             setGs({ ...initialState, view: 'hub', gameType: null, roomCode: null, playerId: getOrCreatePlayerId() });
@@ -555,7 +556,8 @@ export default function App() {
       )}
       {gs.view === 'home' && <Home gs={gs} emit={emit} />}
       {gs.view === 'lobby' && <Lobby gs={gs} emit={emit} />}
-      {gs.view === 'game' && <Game gs={gs} emit={emit} />}
+      {gs.view === 'game' && gs.gameType === 'wordchain' && <WordChainGame gs={gs} emit={emit} />}
+      {gs.view === 'game' && gs.gameType !== 'wordchain' && <Game gs={gs} emit={emit} />}
     </div>
   );
 }

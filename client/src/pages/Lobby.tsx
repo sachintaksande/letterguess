@@ -16,7 +16,7 @@ const AVATAR_EMOJIS = ['🦊', '🦉', '🐯', '🐼', '🐱', '🦅', '🐋', '
 export default function Lobby({ gs, emit }: Props) {
   const [shared, setShared] = useState(false);
 
-  const shareUrl = gs.roomCode ? `${window.location.origin}?game=letterguess&code=${gs.roomCode}` : '';
+  const shareUrl = gs.roomCode ? `${window.location.origin}?game=${gs.gameType || 'letterguess'}&code=${gs.roomCode}` : '';
 
   const shareCode = async () => {
     if (!gs.roomCode) return;
@@ -147,7 +147,7 @@ export default function Lobby({ gs, emit }: Props) {
         {/* Start Game */}
         {gs.roomCreatorId === gs.playerId ? (
           <button
-            onClick={() => emit('start_game')}
+            onClick={() => emit(gs.gameType === 'wordchain' ? 'wc:start_game' : 'start_game')}
             disabled={connectedCount < 2}
             className="w-full btn-neon btn-neon-pink py-5 text-xl disabled:opacity-20 disabled:cursor-not-allowed animate-slide-up"
           >

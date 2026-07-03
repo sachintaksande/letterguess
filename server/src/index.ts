@@ -1,5 +1,5 @@
 // ============================================================
-// LetterGuess Server — Express + Socket.io
+// GameHub Server — Express + Socket.io (multi-game)
 // ============================================================
 
 import express from 'express';
@@ -8,6 +8,7 @@ import { Server, Socket } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import { RoomManager, randomName } from './game/RoomManager';
+import { WordChainManager, randomName as wcRandomName } from './game/WordChainManager';
 import { ServerEvents, ClientEvents } from './game/types';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -34,11 +35,12 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 });
 
-const roomManager = new RoomManager(io);
+const letterguessManager = new RoomManager(io);
+const wordchainManager = new WordChainManager(io);
 
 // Health check
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', rooms: (roomManager as any).rooms?.size || 0 });
+  res.json({ status: 'ok', lgRooms: (letterguessManager as any).rooms?.size || 0, wcRooms: (wordchainManager as any).rooms?.size || 0 });
 });
 
 // Available games
@@ -46,7 +48,7 @@ app.get('/api/games', (_req, res) => {
   res.json({
     games: [
       { id: 'letterguess', name: 'LetterGuess', icon: '🔤', description: 'Multiplayer word guessing — Hangman with a twist', players: '2-20' },
-      { id: 'wordchain', name: 'Word Chain', icon: '🔗', description: 'Chain words by their last letter before time runs out', players: '2-8', comingSoon: true },
+      { id: 'wordchain', name: 'Word Chain', icon: '🔗', description: 'Chain words by their last letter before time runs out', players: '2-8' },
     ],
   });
 });
@@ -68,11 +70,11 @@ io.on('connection', (socket: Socket) => {
     const maxRounds = data.maxRounds || 0;
     const gameType: 'letterguess' | 'wordchain' = data.gameType || 'letterguess';
 
-    const { room, player } = roomManager.createRoom(playerId, playerName, maxPlayers, gameType, maxRounds);
+    const { room, player } = letterguessManager.createRoom(playerId, playerName, maxPlayers, gameType, maxRounds);
     currentPlayerId = playerId;
     currentRoomCode = room.code;
 
-    roomManager.mapSocket(playerId, socket.id);
+    letterguessManager.mapSocket(playerId, socket.id);
     socket.join(room.code);
 
     socket.emit('room_created', { roomCode: room.code, playerId, gameType: room.gameType });
@@ -93,7 +95,7 @@ io.on('connection', (socket: Socket) => {
     const playerId = data.playerId || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const playerName = data.playerName || randomName();
 
-    const result = roomManager.joinRoom(data.roomCode, playerId, playerName);
+    const result = letterguessManager.joinRoom(data.roomCode, playerId, playerName);
 
     if ('error' in result) {
       socket.emit('error', { message: result.error });
@@ -104,12 +106,12 @@ io.on('connection', (socket: Socket) => {
     currentPlayerId = playerId;
     currentRoomCode = room.code;
 
-    roomManager.mapSocket(playerId, socket.id);
+    letterguessManager.mapSocket(playerId, socket.id);
     socket.join(room.code);
 
     if (isReconnect) {
       // Send full room state snapshot for reconnection
-      const snapshot = roomManager.getRoomSnapshot(room);
+      const snapshot = letterguessManager.getRoomSnapshot(room);
       socket.emit('room_state', snapshot);
       socket.emit('room_joined', {
         roomCode: room.code,
@@ -120,7 +122,7 @@ io.on('connection', (socket: Socket) => {
         maxPlayers: room.maxPlayers,
         state: room.state,
       });
-      roomManager.mapSocket(playerId, socket.id);
+      letterguessManager.mapSocket(playerId, socket.id);
       socket.to(room.code).emit('player_reconnected', { playerId });
     } else {
       socket.emit('room_joined', {
@@ -146,13 +148,13 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    const error = roomManager.startGame(currentRoomCode, currentPlayerId);
+    const error = letterguessManager.startGame(currentRoomCode, currentPlayerId);
     if (error) {
       socket.emit('error', { message: error });
       return;
     }
 
-    const room = roomManager.getRoom(currentRoomCode);
+    const room = letterguessManager.getRoom(currentRoomCode);
     if (!room) return;
 
     io.to(currentRoomCode).emit('game_started', {
@@ -168,7 +170,7 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    const error = roomManager.submitPuzzle(currentRoomCode, currentPlayerId, data.puzzle, data.hint);
+    const error = letterguessManager.submitPuzzle(currentRoomCode, currentPlayerId, data.puzzle, data.hint);
     if (error) {
       socket.emit('error', { message: error });
     }
@@ -180,7 +182,7 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    const error = roomManager.guessLetter(currentRoomCode, currentPlayerId, data.letter);
+    const error = letterguessManager.guessLetter(currentRoomCode, currentPlayerId, data.letter);
     if (error) {
       socket.emit('error', { message: error });
     }
@@ -192,7 +194,7 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    const error = roomManager.startAnswerGuess(currentRoomCode, currentPlayerId);
+    const error = letterguessManager.startAnswerGuess(currentRoomCode, currentPlayerId);
     if (error) {
       socket.emit('error', { message: error });
     }
@@ -204,7 +206,7 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    const error = roomManager.submitAnswer(currentRoomCode, currentPlayerId, data.answer);
+    const error = letterguessManager.submitAnswer(currentRoomCode, currentPlayerId, data.answer);
     if (error) {
       socket.emit('error', { message: error });
     }
@@ -214,7 +216,7 @@ io.on('connection', (socket: Socket) => {
     if (!currentRoomCode || !currentPlayerId) {
       return;
     }
-    roomManager.endSession(currentRoomCode);
+    letterguessManager.endSession(currentRoomCode);
     currentRoomCode = null;
     currentPlayerId = null;
   });
@@ -224,7 +226,7 @@ io.on('connection', (socket: Socket) => {
   socket.on('leave_room', () => {
     if (!currentPlayerId) return;
 
-    const { room, playerName } = roomManager.removePlayer(currentPlayerId);
+    const { room, playerName } = letterguessManager.removePlayer(currentPlayerId);
     if (room) {
       io.to(room.code).emit('player_left', { playerId: currentPlayerId, playerName });
     }
@@ -240,13 +242,103 @@ io.on('connection', (socket: Socket) => {
     console.log(`🔌 Socket disconnected: ${socket.id} (player: ${currentPlayerId})`);
 
     if (currentPlayerId) {
-      const { room } = roomManager.removePlayer(currentPlayerId);
-      if (room) {
-        // Don't emit player_left immediately — give them a chance to reconnect
-        // The player_left is only emitted if they explicitly leave
-      }
+      // Try both managers
+      letterguessManager.removePlayer(currentPlayerId);
+      wordchainManager.removePlayer(currentPlayerId);
     }
 
+    currentPlayerId = null;
+    currentRoomCode = null;
+  });
+
+  // ============================================================
+  // Word Chain handlers (prefixed with wc:)
+  // ============================================================
+
+  socket.on('wc:create_room', (data: { playerName: string; maxPlayers: number; playerId?: string }) => {
+    const playerId = data.playerId || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const playerName = data.playerName || wcRandomName();
+    const maxPlayers = Math.max(2, Math.min(data.maxPlayers || 8, 20));
+
+    const { room, player } = wordchainManager.createRoom(playerId, playerName, maxPlayers);
+    currentPlayerId = playerId;
+    currentRoomCode = room.code;
+    wordchainManager.mapSocket(playerId, socket.id);
+    socket.join(room.code);
+
+    socket.emit('room_created', { roomCode: room.code, playerId, gameType: 'wordchain' });
+    socket.emit('room_joined', {
+      roomCode: room.code,
+      playerId,
+      gameType: 'wordchain',
+      roomCreatorId: room.roomCreatorId,
+      players: [...room.players.values()],
+      maxPlayers: room.maxPlayers,
+      state: room.phase,
+    });
+
+    console.log(`🔗 Word Chain room ${room.code} created by ${playerName}`);
+  });
+
+  socket.on('wc:join_room', (data: { roomCode: string; playerName: string; playerId?: string }) => {
+    const playerId = data.playerId || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const playerName = data.playerName || wcRandomName();
+
+    const result = wordchainManager.joinRoom(data.roomCode, playerId, playerName);
+    if ('error' in result) {
+      socket.emit('error', { message: result.error });
+      return;
+    }
+
+    const { room, player, isReconnect } = result;
+    currentPlayerId = playerId;
+    currentRoomCode = room.code;
+    wordchainManager.mapSocket(playerId, socket.id);
+    socket.join(room.code);
+
+    if (isReconnect) {
+      const snapshot = wordchainManager.getRoomSnapshot(room);
+      socket.emit('room_state', snapshot);
+      socket.emit('room_joined', {
+        roomCode: room.code, playerId, gameType: 'wordchain',
+        roomCreatorId: room.roomCreatorId,
+        players: [...room.players.values()], maxPlayers: room.maxPlayers, state: room.phase,
+      });
+    } else {
+      socket.emit('room_joined', {
+        roomCode: room.code, playerId, gameType: 'wordchain',
+        roomCreatorId: room.roomCreatorId,
+        players: [...room.players.values()], maxPlayers: room.maxPlayers, state: room.phase,
+      });
+      socket.to(room.code).emit('player_joined', { player });
+    }
+    console.log(`👤 ${playerName} ${isReconnect ? 'reconnected to' : 'joined'} WC room ${room.code}`);
+  });
+
+  socket.on('wc:start_game', () => {
+    if (!currentRoomCode || !currentPlayerId) { socket.emit('error', { message: 'Not in a room.' }); return; }
+    const error = wordchainManager.startGame(currentRoomCode, currentPlayerId);
+    if (error) socket.emit('error', { message: error });
+  });
+
+  socket.on('wc:guess_word', (data: { word: string }) => {
+    if (!currentRoomCode || !currentPlayerId) { socket.emit('error', { message: 'Not in a room.' }); return; }
+    const error = wordchainManager.guessWord(currentRoomCode, currentPlayerId, data.word);
+    if (error) socket.emit('error', { message: error });
+  });
+
+  socket.on('wc:end_session', () => {
+    if (!currentRoomCode) return;
+    wordchainManager.endSession(currentRoomCode);
+    currentRoomCode = null;
+    currentPlayerId = null;
+  });
+
+  socket.on('wc:leave_room', () => {
+    if (!currentPlayerId) return;
+    const { room, playerName } = wordchainManager.removePlayer(currentPlayerId);
+    if (room) io.to(room.code).emit('player_left', { playerId: currentPlayerId, playerName });
+    if (currentRoomCode) socket.leave(currentRoomCode);
     currentPlayerId = null;
     currentRoomCode = null;
   });
