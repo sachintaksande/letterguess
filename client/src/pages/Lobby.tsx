@@ -16,29 +16,44 @@ const AVATAR_EMOJIS = ['🦊', '🦉', '🐯', '🐼', '🐱', '🦅', '🐋', '
 export default function Lobby({ gs, emit }: Props) {
   const [shared, setShared] = useState(false);
 
+  const shareUrl = gs.roomCode ? `${window.location.origin}?code=${gs.roomCode}` : '';
+
   const shareCode = async () => {
     if (!gs.roomCode) return;
-    const shareUrl = `${window.location.origin}?code=${gs.roomCode}`;
-    const shareText = `Join my LetterGuess room! Code: ${gs.roomCode}\n${shareUrl}`;
+    const shareText = `Join my LetterGuess room! Code: ${gs.roomCode}`;
 
-    // Try native share (mobile), fall back to clipboard
+    // 1. Try native share (mobile HTTPS / localhost)
     if (navigator.share) {
       try {
         await navigator.share({ title: 'LetterGuess Room', text: shareText, url: shareUrl });
         setShared(true);
         setTimeout(() => setShared(false), 2000);
         return;
-      } catch {} // user cancelled — don't fall back
+      } catch {} // user cancelled or HTTPS required — continue to fallback
     }
 
-    // Desktop fallback: copy link to clipboard
+    // 2. Try clipboard API (HTTPS only)
     try {
       await navigator.clipboard.writeText(shareUrl);
       setShared(true);
       setTimeout(() => setShared(false), 2000);
+      return;
+    } catch {}
+
+    // 3. Old-school copy (works on HTTP / iOS)
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
     } catch {
-      // Last resort: select and copy
-      // nothing to do
+      // Nothing more we can do — URL is visible for manual copy
     }
   };
 
@@ -58,14 +73,13 @@ export default function Lobby({ gs, emit }: Props) {
               {gs.roomCode}
             </span>
             <span className="text-2xl group-hover:scale-125 transition-transform">
-              {shared ? '✅' : '📤'}
+              {shared ? '✅' : '📋'}
             </span>
           </button>
           {shared && (
-            <p className="text-neon-lime text-sm mt-2 animate-bounce-in">
-              {typeof navigator.share !== 'undefined' ? 'Shared!' : 'Link copied!'}
-            </p>
+            <p className="text-neon-lime text-sm mt-2 animate-bounce-in">Link copied!</p>
           )}
+          <p className="text-gray-500 text-xs mt-2 break-all select-all">{shareUrl}</p>
         </div>
 
         {/* Players */}
