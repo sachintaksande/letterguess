@@ -31,7 +31,7 @@ interface WCRoom {
 
 // ---- Constants ----
 
-const TURN_TIMER_SEC = 8;
+const TURN_TIMER_SEC = 30;
 const MAX_STRIKES = 3;
 const MIN_WORD_LENGTH = 2;
 const ROOM_EXPIRY_MS = 24 * 60 * 60 * 1000;

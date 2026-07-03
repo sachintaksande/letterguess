@@ -27,7 +27,7 @@ export default function WordChainGame({ gs, emit }: Props) {
   const [currentWord, setCurrentWord] = useState('');
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [currentPlayerName, setCurrentPlayerName] = useState('');
-  const [timeLimit, setTimeLimit] = useState(8);
+  const [timeLimit, setTimeLimit] = useState(30);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [phase, setPhase] = useState<'LOBBY' | 'PLAYING' | 'ENDED'>(gs.state || 'LOBBY');
   const [players, setPlayers] = useState<WCPlayer[]>(gs.players || []);
