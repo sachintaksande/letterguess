@@ -4,6 +4,7 @@
 
 import { Server, Socket } from 'socket.io';
 import { generateRoomCode } from '../utils/roomCode';
+import { isValidWord } from './wordValidator';
 
 // ---- Types ----
 
@@ -243,6 +244,11 @@ export class WordChainManager {
     }
     if (room.usedWords.has(cleanWord)) {
       return this.strikePlayer(room, playerId, `"${cleanWord}" was already used.`);
+    }
+
+    // Dictionary check
+    if (!isValidWord(cleanWord)) {
+      return this.strikePlayer(room, playerId, `"${cleanWord}" is not a valid English word.`);
     }
 
     // Valid guess
