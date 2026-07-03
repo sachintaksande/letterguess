@@ -15,8 +15,14 @@ export default function Home({ gs, emit }: Props) {
   const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [maxRounds, setMaxRounds] = useState(5);
-  const [roomCode, setRoomCode] = useState('');
+  const [roomCode, setRoomCode] = useState(() => {
+    // Auto-populate from ?code= URL param (shared links)
+    return new URLSearchParams(window.location.search).get('code') || '';
+  });
   const [loading, setLoading] = useState(false);
+
+  // If code came from URL, switch to join tab
+  const hasUrlCode = !!new URLSearchParams(window.location.search).get('code');
 
   const handleCreate = (e: FormEvent) => {
     e.preventDefault();
@@ -57,7 +63,7 @@ export default function Home({ gs, emit }: Props) {
           <button
             onClick={() => setTab('create')}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-              tab === 'create'
+              tab === 'create' || (tab === 'join' && !hasUrlCode)
                 ? 'bg-neon-gradient text-white shadow-lg shadow-purple-500/30'
                 : 'text-gray-400 hover:text-white'
             }`}
@@ -143,18 +149,6 @@ export default function Home({ gs, emit }: Props) {
         {tab === 'join' && (
           <form onSubmit={handleJoin} className="glass-card p-6 space-y-5 animate-slide-up">
             <div>
-              <label className="block text-sm font-semibold text-purple-300 mb-1.5">🎭 Your Alias</label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={e => setPlayerName(e.target.value)}
-                placeholder="Random name if empty"
-                maxLength={20}
-                className="game-input"
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-semibold text-purple-300 mb-1.5">🔑 Room Code</label>
               <input
                 type="text"
@@ -167,11 +161,26 @@ export default function Home({ gs, emit }: Props) {
                 className="game-input text-center text-3xl tracking-[0.2em] font-black"
                 autoFocus
               />
+              {hasUrlCode && (
+                <p className="text-neon-lime text-xs mt-1 font-semibold">✅ Code filled from shared link</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-purple-300 mb-1.5">🎭 Your Alias</label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={e => setPlayerName(e.target.value)}
+                placeholder="Random name if empty"
+                maxLength={20}
+                className="game-input"
+              />
             </div>
 
             <button
               type="submit"
-              disabled={loading || roomCode.trim().length === 0}
+              disabled={loading || roomCode.trim().length < 8}
               className="w-full btn-neon btn-neon-cyan py-4 text-lg disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {loading ? '⏳ Joining...' : '🎮 Join Room'}

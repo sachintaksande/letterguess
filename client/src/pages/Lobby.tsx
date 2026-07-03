@@ -14,13 +14,31 @@ const AVATAR_EMOJIS = ['🦊', '🦉', '🐯', '🐼', '🐱', '🦅', '🐋', '
   '🦝', '🦈', '🐆', '🦦', '🐰', '🦌', '🐸', '🦡', '🐻', '🦢'];
 
 export default function Lobby({ gs, emit }: Props) {
-  const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
 
-  const copyCode = () => {
-    if (gs.roomCode) {
-      navigator.clipboard.writeText(gs.roomCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const shareCode = async () => {
+    if (!gs.roomCode) return;
+    const shareUrl = `${window.location.origin}?code=${gs.roomCode}`;
+    const shareText = `Join my LetterGuess room! Code: ${gs.roomCode}\n${shareUrl}`;
+
+    // Try native share (mobile), fall back to clipboard
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'LetterGuess Room', text: shareText, url: shareUrl });
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+        return;
+      } catch {} // user cancelled — don't fall back
+    }
+
+    // Desktop fallback: copy link to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      // Last resort: select and copy
+      // nothing to do
     }
   };
 
@@ -33,18 +51,20 @@ export default function Lobby({ gs, emit }: Props) {
         <div className="text-center mb-8 animate-slide-up">
           <p className="text-sm text-purple-300/60 mb-3 font-semibold">📋 Share this code</p>
           <button
-            onClick={copyCode}
+            onClick={shareCode}
             className="room-code-display inline-flex items-center gap-3 px-8 py-5 group transition-all duration-300"
           >
             <span className="text-5xl font-black text-neon-cyan">
               {gs.roomCode}
             </span>
             <span className="text-2xl group-hover:scale-125 transition-transform">
-              {copied ? '✅' : '📋'}
+              {shared ? '✅' : '📤'}
             </span>
           </button>
-          {copied && (
-            <p className="text-neon-lime text-sm mt-2 animate-bounce-in">Copied!</p>
+          {shared && (
+            <p className="text-neon-lime text-sm mt-2 animate-bounce-in">
+              {typeof navigator.share !== 'undefined' ? 'Shared!' : 'Link copied!'}
+            </p>
           )}
         </div>
 
