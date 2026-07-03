@@ -15,6 +15,7 @@ import { loadMuteStates, isSfxMuted, isMusicMuted, toggleSfxMute, toggleMusicMut
 
 const PLAYER_ID_KEY = 'letterguess_playerId';
 const ROOM_CODE_KEY = 'letterguess_roomCode';
+const GAME_TYPE_KEY = 'letterguess_gameType';
 
 // Read which game to load from URL
 function getUrlGame(): string | null {
@@ -32,6 +33,10 @@ function getOrCreatePlayerId(): string {
 
 function getSavedRoomCode(): string | null {
   return sessionStorage.getItem(ROOM_CODE_KEY);
+}
+
+function getSavedGameType(): string {
+  return sessionStorage.getItem(GAME_TYPE_KEY) || 'letterguess';
 }
 
 const urlGame = getUrlGame();
@@ -89,9 +94,11 @@ export default function App() {
     const savedRoomCode = getSavedRoomCode();
     const savedPlayerId = getOrCreatePlayerId();
     if (savedRoomCode && savedPlayerId) {
+      const savedGame = getSavedGameType();
+      const prefix = savedGame === 'wordchain' ? 'wc:' : '';
       // Wait for socket to connect, then rejoin
       const onConnect = () => {
-        socket.emit('join_room', {
+        socket.emit(`${prefix}join_room`, {
           roomCode: savedRoomCode,
           playerId: savedPlayerId,
         });
@@ -112,6 +119,7 @@ export default function App() {
 
     socket.on('room_joined', (data: any) => {
       sessionStorage.setItem(ROOM_CODE_KEY, data.roomCode);
+      sessionStorage.setItem(GAME_TYPE_KEY, data.gameType || 'letterguess');
       setGs(prev => ({
         ...prev,
         view: data.state === 'LOBBY' ? 'lobby' : 'game',
