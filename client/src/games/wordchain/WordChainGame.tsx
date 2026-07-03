@@ -10,6 +10,7 @@ interface WCPlayer {
   id: string;
   name: string;
   strikes: number;
+  score: number;
   eliminated: boolean;
   connected: boolean;
 }
@@ -75,9 +76,9 @@ export default function WordChainGame({ gs, emit }: Props) {
         setSecondsLeft(null);
       }
       if (data.eliminated) {
-        setPlayers(prev => prev.map(p => p.id === data.playerId ? { ...p, strikes: data.strikes, eliminated: true } : p));
+        setPlayers(prev => prev.map(p => p.id === data.playerId ? { ...p, strikes: data.strikes, score: data.score, eliminated: true } : p));
       } else {
-        setPlayers(prev => prev.map(p => p.id === data.playerId ? { ...p, strikes: data.strikes } : p));
+        setPlayers(prev => prev.map(p => p.id === data.playerId ? { ...p, strikes: data.strikes, score: data.score } : p));
       }
     };
     const onPlayerEliminated = (data: any) => {
@@ -128,6 +129,9 @@ export default function WordChainGame({ gs, emit }: Props) {
               <div key={p.id} className={`flex items-center justify-between px-3 py-2 rounded-lg ${p.id === gameEnded.winnerId ? 'bg-neon-lime/10 border border-neon-lime/20' : ''}`}>
                 <span className="font-bold text-white">{p.name}</span>
                 <span className="text-sm">{STRIKE_EMOJI[p.strikes] || '✅'}</span>
+                <span className={`text-xs font-bold w-8 text-right ${(p.score || 0) >= 0 ? 'text-neon-lime' : 'text-red-400'}`}>
+                  {(p.score || 0) > 0 ? '+' : ''}{p.score || 0}
+                </span>
               </div>
             ))}
           </div>
@@ -216,16 +220,19 @@ export default function WordChainGame({ gs, emit }: Props) {
             lastResult.valid ? 'border-neon-lime/20' : 'border-red-500/20'
           }`}>
             {lastResult.valid ? (
-              <p><span className="text-neon-lime font-bold">{lastResult.playerName}</span> → <span className="text-white font-black">{lastResult.word}</span></p>
+              <p><span className="text-neon-lime font-bold">{lastResult.playerName}</span> → <span className="text-white font-black">{lastResult.word}</span> <span className="text-neon-lime text-xs ml-1">+1</span></p>
             ) : lastResult.word ? (
               <p>
                 <span className="text-red-400 font-bold">{lastResult.playerName}</span>
                 <span className="text-gray-400"> tried </span>
-                <span className="text-red-300">{lastResult.word}</span>
+                <span className="text-red-300 line-through">{lastResult.word}</span>
                 <span className="text-red-400"> — {lastResult.reason}</span>
               </p>
             ) : (
               <p className="text-red-400">{lastResult.playerName}: {lastResult.reason}</p>
+            )}
+            {!lastResult.valid && (
+              <p className="text-amber-400 text-xs mt-1 font-bold">⏭️ Turn skipped · −1 point</p>
             )}
           </div>
         )}
@@ -250,6 +257,9 @@ export default function WordChainGame({ gs, emit }: Props) {
                   {p.id === myId && <span className="text-xs text-purple-400">(You)</span>}
                 </div>
                 <span className="text-sm">{STRIKE_EMOJI[p.strikes] || '✅'}</span>
+                <span className={`text-xs font-bold w-8 text-right ${(p.score || 0) >= 0 ? 'text-neon-lime' : 'text-red-400'}`}>
+                  {(p.score || 0) > 0 ? '+' : ''}{p.score || 0}
+                </span>
               </div>
             ))}
           </div>

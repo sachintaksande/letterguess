@@ -261,7 +261,11 @@ export class WordChainManager {
       word: cleanWord,
       valid: true,
       strikes: player.strikes,
+      score: (player as any).score || 0,
     });
+
+    // Track score
+    (player as any).score = ((player as any).score || 0) + 1;
 
     this.advanceTurn(room);
     return null;
@@ -272,6 +276,7 @@ export class WordChainManager {
     if (!player) return null;
 
     player.strikes++;
+    (player as any).score = ((player as any).score || 0) - 1;
     const eliminated = player.strikes >= MAX_STRIKES;
     if (eliminated) player.eliminated = true;
 
@@ -281,6 +286,7 @@ export class WordChainManager {
       word: '',
       valid: false,
       strikes: player.strikes,
+      score: (player as any).score || 0,
       eliminated,
       reason,
     });
