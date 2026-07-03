@@ -6,6 +6,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
 import { RoomManager, randomName } from './game/RoomManager';
 import { ServerEvents, ClientEvents } from './game/types';
 
@@ -13,6 +14,15 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 const app = express();
 app.use(cors());
+
+// Serve built client in production
+const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
+app.use(express.static(clientDist));
+app.get('*', (_req, res, next) => {
+  // Don't catch API/WS routes
+  if (_req.path.startsWith('/socket.io') || _req.path === '/health') return next();
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
