@@ -184,9 +184,13 @@ export class WordChainManager {
       currentWord: room.currentWord,
       turnOrder: room.turnOrder,
       turnIndex: 0,
+      currentPlayerId: room.turnOrder[0],
+      currentPlayerName: room.players.get(room.turnOrder[0])?.name || '',
+      timeLimit: TURN_TIMER_SEC,
     });
 
-    this.startTurn(room);
+    // Delay first turn to let game component mount and register listeners
+    setTimeout(() => this.startTurn(room), 200);
     return null;
   }
 

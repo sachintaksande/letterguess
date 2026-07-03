@@ -55,6 +55,10 @@ export default function WordChainGame({ gs, emit }: Props) {
     const onGameStarted = (data: any) => {
       setCurrentWord(data.currentWord);
       setPhase('PLAYING');
+      setCurrentPlayerId(data.currentPlayerId);
+      setCurrentPlayerName(data.currentPlayerName);
+      setSecondsLeft(data.timeLimit);
+      setTimeLimit(data.timeLimit);
       setLastResult({ word: data.currentWord, playerName: 'Game', valid: true });
     };
     const onTurnUpdate = (data: any) => {
