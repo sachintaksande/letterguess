@@ -11,18 +11,16 @@ interface Props {
 }
 
 export default function Home({ gs, emit }: Props) {
-  const [tab, setTab] = useState<'create' | 'join'>('create');
+  const urlCode = new URLSearchParams(window.location.search).get('code');
+  const [tab, setTab] = useState<'create' | 'join'>(urlCode ? 'join' : 'create');
   const [playerName, setPlayerName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [maxRounds, setMaxRounds] = useState(5);
-  const [roomCode, setRoomCode] = useState(() => {
-    // Auto-populate from ?code= URL param (shared links)
-    return new URLSearchParams(window.location.search).get('code') || '';
-  });
+  const [roomCode, setRoomCode] = useState(urlCode || '');
   const [loading, setLoading] = useState(false);
 
-  // If code came from URL, switch to join tab
-  const hasUrlCode = !!new URLSearchParams(window.location.search).get('code');
+  // If code came from URL, show join tab
+  const hasUrlCode = !!urlCode;
 
   const handleCreate = (e: FormEvent) => {
     e.preventDefault();
@@ -63,7 +61,7 @@ export default function Home({ gs, emit }: Props) {
           <button
             onClick={() => setTab('create')}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-              tab === 'create' || (tab === 'join' && !hasUrlCode)
+              tab === 'create'
                 ? 'bg-neon-gradient text-white shadow-lg shadow-purple-500/30'
                 : 'text-gray-400 hover:text-white'
             }`}
