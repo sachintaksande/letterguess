@@ -41,6 +41,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', rooms: (roomManager as any).rooms?.size || 0 });
 });
 
+// Available games
+app.get('/api/games', (_req, res) => {
+  res.json({
+    games: [
+      { id: 'letterguess', name: 'LetterGuess', icon: '🔤', description: 'Multiplayer word guessing — Hangman with a twist', players: '2-20' },
+      { id: 'wordchain', name: 'Word Chain', icon: '🔗', description: 'Chain words by their last letter before time runs out', players: '2-8', comingSoon: true },
+    ],
+  });
+});
+
 // ---- Socket.io connection handling ----
 
 io.on('connection', (socket: Socket) => {
@@ -51,23 +61,25 @@ io.on('connection', (socket: Socket) => {
 
   // ---- Room creation & joining ----
 
-  socket.on('create_room', (data: { playerName: string; maxPlayers: number; maxRounds?: number; playerId?: string }) => {
+  socket.on('create_room', (data: { playerName: string; maxPlayers: number; maxRounds?: number; playerId?: string; gameType?: 'letterguess' | 'wordchain' }) => {
     const playerId = data.playerId || `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const playerName = data.playerName || randomName();
     const maxPlayers = Math.max(2, Math.min(data.maxPlayers || 8, 20));
     const maxRounds = data.maxRounds || 0;
+    const gameType: 'letterguess' | 'wordchain' = data.gameType || 'letterguess';
 
-    const { room, player } = roomManager.createRoom(playerId, playerName, maxPlayers, maxRounds);
+    const { room, player } = roomManager.createRoom(playerId, playerName, maxPlayers, gameType, maxRounds);
     currentPlayerId = playerId;
     currentRoomCode = room.code;
 
     roomManager.mapSocket(playerId, socket.id);
     socket.join(room.code);
 
-    socket.emit('room_created', { roomCode: room.code, playerId });
+    socket.emit('room_created', { roomCode: room.code, playerId, gameType: room.gameType });
     socket.emit('room_joined', {
       roomCode: room.code,
       playerId,
+      gameType: room.gameType,
       roomCreatorId: room.roomCreatorId,
       players: [...room.players.values()],
       maxPlayers: room.maxPlayers,
@@ -102,6 +114,7 @@ io.on('connection', (socket: Socket) => {
       socket.emit('room_joined', {
         roomCode: room.code,
         playerId,
+        gameType: room.gameType,
         roomCreatorId: room.roomCreatorId,
         players: [...room.players.values()],
         maxPlayers: room.maxPlayers,
@@ -113,6 +126,7 @@ io.on('connection', (socket: Socket) => {
       socket.emit('room_joined', {
         roomCode: room.code,
         playerId,
+        gameType: room.gameType,
         roomCreatorId: room.roomCreatorId,
         players: [...room.players.values()],
         maxPlayers: room.maxPlayers,

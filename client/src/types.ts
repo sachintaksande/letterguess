@@ -59,10 +59,11 @@ export interface RoomSnapshot {
   creatorRotationIndex: number;
 }
 
-export type GameView = 'home' | 'lobby' | 'game';
+export type GameView = 'hub' | 'home' | 'lobby' | 'game';
 
 export interface GameState {
   view: GameView;
+  gameType: string | null;       // 'letterguess' | 'wordchain'
   roomCode: string | null;
   playerId: string | null;
   playerName: string | null;

@@ -16,7 +16,7 @@ const AVATAR_EMOJIS = ['🦊', '🦉', '🐯', '🐼', '🐱', '🦅', '🐋', '
 export default function Lobby({ gs, emit }: Props) {
   const [shared, setShared] = useState(false);
 
-  const shareUrl = gs.roomCode ? `${window.location.origin}?code=${gs.roomCode}` : '';
+  const shareUrl = gs.roomCode ? `${window.location.origin}?game=letterguess&code=${gs.roomCode}` : '';
 
   const shareCode = async () => {
     if (!gs.roomCode) return;

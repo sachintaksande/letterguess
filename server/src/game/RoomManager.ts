@@ -47,7 +47,7 @@ export class RoomManager {
 
   // ---- Room CRUD ----
 
-  createRoom(playerId: string, playerName: string, maxPlayers: number, maxRounds: number = 0): { room: Room; player: PlayerInfo } {
+  createRoom(playerId: string, playerName: string, maxPlayers: number, gameType: 'letterguess' | 'wordchain' = 'letterguess', maxRounds: number = 0): { room: Room; player: PlayerInfo } {
     const code = generateRoomCode(new Set(this.rooms.keys()));
     const player: PlayerInfo = {
       id: playerId,
@@ -61,6 +61,7 @@ export class RoomManager {
 
     const room: Room = {
       code,
+      gameType,
       maxPlayers: Math.max(2, Math.min(maxPlayers, 20)),
       maxRounds: Math.max(0, maxRounds),  // 0 = unlimited
       state: 'LOBBY',

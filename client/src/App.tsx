@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { connectSocket, getSocket, disconnectSocket } from './socket';
 import { GameState, RoomSnapshot } from './types';
+import Hub from './pages/Hub';
 import Home from './pages/Home';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
@@ -13,6 +14,11 @@ import { loadMuteStates, isSfxMuted, isMusicMuted, toggleSfxMute, toggleMusicMut
 
 const PLAYER_ID_KEY = 'letterguess_playerId';
 const ROOM_CODE_KEY = 'letterguess_roomCode';
+
+// Read which game to load from URL
+function getUrlGame(): string | null {
+  return new URLSearchParams(window.location.search).get('game');
+}
 
 function getOrCreatePlayerId(): string {
   // sessionStorage = per-tab (so opening a 2nd tab creates a NEW player for testing multiplayer)
@@ -27,8 +33,11 @@ function getSavedRoomCode(): string | null {
   return sessionStorage.getItem(ROOM_CODE_KEY);
 }
 
+const urlGame = getUrlGame();
+
 const initialState: GameState = {
-  view: 'home',
+  view: urlGame ? 'home' : 'hub',
+  gameType: urlGame || null,
   roomCode: getSavedRoomCode(),
   playerId: getOrCreatePlayerId(),
   playerName: null,
@@ -105,6 +114,7 @@ export default function App() {
       setGs(prev => ({
         ...prev,
         view: data.state === 'LOBBY' ? 'lobby' : 'game',
+        gameType: data.gameType || 'letterguess',
         roomCode: data.roomCode,
         playerId: data.playerId,
         roomCreatorId: data.roomCreatorId || data.players?.[0]?.id || null,
@@ -481,8 +491,11 @@ export default function App() {
       {/* Header */}
       <header className="border-b border-white/5 px-4 py-3 flex items-center justify-between backdrop-blur bg-black/20">
         <h1 className="text-xl font-black tracking-tight">
-          <span className="bg-neon-gradient bg-clip-text text-transparent">LETTER</span>
-          <span className="text-white">GUESS</span>
+          {(gs.view === 'hub' || !gs.gameType) ? (
+            <><span className="bg-neon-gradient bg-clip-text text-transparent">GAME</span><span className="text-white">HUB</span></>
+          ) : (
+            <><span className="bg-neon-gradient bg-clip-text text-transparent cursor-pointer" onClick={() => { setGs({ ...initialState, roomCode: null, playerId: getOrCreatePlayerId() }); }}>← </span><span className="text-white">{gs.gameType === 'letterguess' ? 'LETTERGUESS' : 'WORD CHAIN'}</span></>
+          )}
         </h1>
         <div className="flex items-center gap-2">
           <button
@@ -530,13 +543,16 @@ export default function App() {
             emit('leave_room');
             disconnectSocket();
             setShowLeaveConfirm(false);
-            setGs({ ...initialState, roomCode: null, playerId: getOrCreatePlayerId() });
+            setGs({ ...initialState, view: 'hub', gameType: null, roomCode: null, playerId: getOrCreatePlayerId() });
             setTimeout(() => connectSocket(), 100);
           }}
         />
       )}
 
       {/* Views */}
+      {gs.view === 'hub' && (
+        <Hub onSelectGame={(gameId) => setGs(prev => ({ ...prev, view: 'home', gameType: gameId }))} />
+      )}
       {gs.view === 'home' && <Home gs={gs} emit={emit} />}
       {gs.view === 'lobby' && <Lobby gs={gs} emit={emit} />}
       {gs.view === 'game' && <Game gs={gs} emit={emit} />}

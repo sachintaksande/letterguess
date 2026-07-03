@@ -38,17 +38,18 @@ export interface RoundData {
 
 export interface Room {
   code: string;
+  gameType: 'letterguess' | 'wordchain';  // which game this room is for
   maxPlayers: number;
-  maxRounds: number;                // 0 = unlimited
+  maxRounds: number;                // 0 = unlimited (letterguess-specific)
   state: RoomPhase;
   roomCreatorId: string;              // who created the room (can start game)
   players: Map<string, PlayerInfo>;
-  rounds: RoundData[];
-  currentRoundIndex: number;
+  rounds: RoundData[];               // letterguess-specific
+  currentRoundIndex: number;         // letterguess-specific
   createdAt: Date;
   lastActivityAt: Date;
-  creatorRotationOrder: string[];   // player IDs in join order
-  creatorRotationIndex: number;     // points to index of next creator in rotationOrder
+  creatorRotationOrder: string[];   // letterguess-specific
+  creatorRotationIndex: number;     // letterguess-specific
 }
 
 // ----- Socket event payloads (server → client) -----
