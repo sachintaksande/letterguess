@@ -20,10 +20,11 @@ interface WCRoom {
   code: string;
   maxPlayers: number;
   players: Map<string, WCPlayer>;
-  currentWord: string;          // the word the next player must start from
+  currentWord: string;
   usedWords: Set<string>;
-  turnOrder: string[];          // player IDs in join order
+  turnOrder: string[];
   turnIndex: number;
+  consecutiveStrikes: number;   // resets on valid word, game ends when all active players strike
   phase: 'LOBBY' | 'PLAYING' | 'ENDED';
   roomCreatorId: string;
   createdAt: Date;
@@ -94,6 +95,7 @@ export class WordChainManager {
       usedWords: new Set(),
       turnOrder: [playerId],
       turnIndex: 0,
+      consecutiveStrikes: 0,
       phase: 'LOBBY',
       roomCreatorId: playerId,
       createdAt: new Date(),
@@ -266,6 +268,7 @@ export class WordChainManager {
 
     // Track score
     (player as any).score = ((player as any).score || 0) + 1;
+    room.consecutiveStrikes = 0;  // reset the streak
 
     this.advanceTurn(room);
     return null;
@@ -303,6 +306,13 @@ export class WordChainManager {
     const activePlayers = [...room.players.values()].filter(p => !p.eliminated && p.connected);
     if (activePlayers.length <= 1) {
       this.endGame(room, activePlayers[0]?.id || null);
+      return null;
+    }
+
+    // Check if all active players have struck in a row — nobody can continue
+    room.consecutiveStrikes++;
+    if (room.consecutiveStrikes >= activePlayers.length) {
+      this.endGame(room, null); // no winner — chain broken
       return null;
     }
 
