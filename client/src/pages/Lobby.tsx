@@ -20,12 +20,12 @@ export default function Lobby({ gs, emit }: Props) {
 
   const shareCode = async () => {
     if (!gs.roomCode) return;
-    const shareText = `Join my LetterGuess room! Code: ${gs.roomCode}`;
+    const shareText = `Join my LetterGuess room!\n${shareUrl}`;
 
-    // 1. Try native share (mobile HTTPS / localhost)
+    // 1. Try native share (mobile)
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'LetterGuess Room', text: shareText, url: shareUrl });
+        await navigator.share({ title: 'LetterGuess Room', text: shareText });
         setShared(true);
         setTimeout(() => setShared(false), 2000);
         return;

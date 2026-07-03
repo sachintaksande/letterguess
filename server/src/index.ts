@@ -20,7 +20,7 @@ const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));
 app.get('*', (_req, res, next) => {
   // Don't catch API/WS routes
-  if (_req.path.startsWith('/socket.io') || _req.path === '/health') return next();
+  if (_req.path.startsWith('/socket.io') || _req.path.startsWith('/api') || _req.path === '/health') return next();
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
